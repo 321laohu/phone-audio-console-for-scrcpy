@@ -1,0 +1,359 @@
+﻿<Window x:Class="PhoneAudioConsole.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="手机音频控制台"
+        Width="640" Height="440"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="True"
+        FontFamily="Microsoft YaHei UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Grid x:Name="RootGrid" ClipToBounds="True" SizeChanged="RootGrid_SizeChanged">
+        <!-- 真正的圆角裁剪遮罩：ClipToBounds 只做矩形裁剪，方角就是这里露出来的 -->
+        <Grid.Clip>
+            <RectangleGeometry x:Name="RootClip" RadiusX="20" RadiusY="20" Rect="0,0,640,440"/>
+        </Grid.Clip>
+        <!-- ===== 壁纸光斑层（在玻璃下方） ===== -->
+        <Border x:Name="BgLayer" CornerRadius="20" ClipToBounds="True">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#D8D2C4" Offset="0"/>
+                    <GradientStop Color="#D8D2C4" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid>
+            <!-- 三个径向光斑 -->
+            <Ellipse x:Name="Blob1" Width="520" Height="420" HorizontalAlignment="Left" VerticalAlignment="Top"
+                     Margin="-120,-140,0,0">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop x:Name="Blob1Center" Color="#A8B8FF" Offset="0"/>
+                        <GradientStop x:Name="Blob1Edge" Color="#00A8B8FF" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse x:Name="Blob2" Width="520" Height="420" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                     Margin="0,0,-140,-150">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop x:Name="Blob2Center" Color="#FFC4E8" Offset="0"/>
+                        <GradientStop x:Name="Blob2Edge" Color="#00FFC4E8" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse x:Name="Blob3" Width="460" Height="360" HorizontalAlignment="Right" VerticalAlignment="Top"
+                     Margin="0,-100,-80,0">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop x:Name="Blob3Center" Color="#9FE8FF" Offset="0"/>
+                        <GradientStop x:Name="Blob3Edge" Color="#009FE8FF" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            </Grid>
+            <Border.Effect>
+                <BlurEffect Radius="60"/>
+            </Border.Effect>
+        </Border>
+
+        <!-- 噪点层（feTurbulence 等效） -->
+        <Rectangle x:Name="NoiseLayer" Opacity="0.055" IsHitTestVisible="False"/>
+
+        <!-- ===== 玻璃层 ===== -->
+        <Border x:Name="GlassLayer" CornerRadius="20" BorderThickness="1">
+            <!-- 135° 斜向高光 -->
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#8CFCF9F3" Offset="0"/>
+                    <GradientStop Color="#40FCF9F3" Offset="0.16"/>
+                    <GradientStop Color="#00FCF9F3" Offset="0.42"/>
+                    <GradientStop Color="#00FCF9F3" Offset="0.76"/>
+                    <GradientStop Color="#28FCF9F3" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="38"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题栏 -->
+            <Grid Grid.Row="0" x:Name="TitleBar" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <TextBlock x:Name="TitleText" Text="手机音频控制台" FontSize="15" FontWeight="Bold"
+                           VerticalAlignment="Center" Margin="18,0,0,0" Opacity="0.92"
+                           FontFamily="Microsoft YaHei UI"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Margin="0,0,6,0">
+                    <!-- 明暗切换 -->
+                    <Button x:Name="ThemeBtn" Style="{StaticResource TitleButton}" Click="ThemeBtn_Click"
+                            ToolTip="切换明暗">
+                        <Path x:Name="ThemeIcon" Data="M6,1.8 A4.2,4.2 0 1 1 5.99,1.8 M6,1.8 L6,10.2"
+                              StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Stretch="Uniform" Width="10" Height="10">
+                            <Path.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Path.RenderTransform>
+                        </Path>
+                    </Button>
+                    <!-- 最小化 -->
+                    <Button x:Name="MinBtn" Style="{StaticResource TitleButton}" Click="MinBtn_Click" ToolTip="最小化到托盘">
+                        <Path Data="M0,4.5 L9,4.5" StrokeThickness="1.2" StrokeStartLineCap="Round"
+                              Stretch="Uniform" Width="9" Height="9"/>
+                    </Button>
+                    <!-- 关闭（D-12：收进托盘） -->
+                    <Button x:Name="CloseBtn" Style="{StaticResource TitleButton}" Click="CloseBtn_Click"
+                            ToolTip="收进托盘（右键托盘图标可退出）">
+                        <Path Data="M0,0 L9,9 M9,0 L0,9" StrokeThickness="1.2" StrokeStartLineCap="Round"
+                              Stretch="Uniform" Width="9" Height="9"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- 主体 -->
+            <Grid Grid.Row="1" Margin="20,4,20,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="186"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 左列：声波封面 + 时长 -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,10,0,0">
+                    <Border x:Name="CoverBorder" Width="144" Height="144" CornerRadius="28" ClipToBounds="True">
+                        <Grid x:Name="CoverGrid">
+                            <StackPanel x:Name="WavePanel" Orientation="Horizontal"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border x:Name="Bar1" Width="6" Height="20" CornerRadius="3" Margin="2.5,0"/>
+                                <Border x:Name="Bar2" Width="6" Height="42" CornerRadius="3" Margin="2.5,0"/>
+                                <Border x:Name="Bar3" Width="6" Height="66" CornerRadius="3" Margin="2.5,0"/>
+                                <Border x:Name="Bar4" Width="6" Height="48" CornerRadius="3" Margin="2.5,0"/>
+                                <Border x:Name="Bar5" Width="6" Height="80" CornerRadius="3" Margin="2.5,0"/>
+                                <Border x:Name="Bar6" Width="6" Height="42" CornerRadius="3" Margin="2.5,0"/>
+                                <Border x:Name="Bar7" Width="6" Height="60" CornerRadius="3" Margin="2.5,0"/>
+                                <Border x:Name="Bar8" Width="6" Height="26" CornerRadius="3" Margin="2.5,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+                        <TextBlock x:Name="ClockText" Text="00:00" FontSize="28" FontWeight="Bold"
+                                   FontFamily="Consolas" Foreground="#1C1914"/>
+                        <TextBlock x:Name="ClockUnit" Text="已播放" FontSize="9.5" Opacity="0.45"
+                                   VerticalAlignment="Bottom" Margin="7,0,0,5"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 右列 -->
+                <Grid Grid.Column="1" Margin="20,6,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+
+                    <TextBlock Grid.Row="1" x:Name="DeviceSub" Text="未连接" FontSize="14" Opacity="0.72"
+                               Margin="0,2,0,0" Foreground="#1C1914"/>
+
+                    <!-- 状态标签 -->
+                    <Border Grid.Row="2" x:Name="StateTag" HorizontalAlignment="Left" Margin="0,8,0,0"
+                            CornerRadius="99" Padding="11,4" Background="#121C1914" BorderBrush="#1F1C1914"
+                            BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="StateDot" Width="8" Height="8" Fill="#1C1914" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="StateText" Text="未连接" FontSize="12.5" FontWeight="SemiBold" Foreground="#1C1914"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- D-13 内联错误提示条 -->
+                    <Border Grid.Row="2" x:Name="ErrorBar" Visibility="Collapsed" Margin="0,8,0,0"
+                            CornerRadius="9" Padding="11,7" Background="#1FC0392B" BorderBrush="#66C0392B"
+                            BorderThickness="1" VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock x:Name="ErrTitle" Text="" FontSize="10.5" FontWeight="Bold"
+                                       Foreground="#C0392B" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="ErrDetail" Text="" FontSize="10" Opacity="0.85"
+                                       Foreground="#C0392B" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 音量行（D-09 + D-16） -->
+                    <Border Grid.Row="3" x:Name="VolumeBar" Margin="0,12,0,0" CornerRadius="99" Padding="9,7,8,7"
+                            BorderThickness="1" Background="#9EFFFFFF" BorderBrush="#E6FFFFFF">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 喇叭：点击静音（D-16） -->
+                            <Button Grid.Column="0" x:Name="VolIconBtn" Click="VolIcon_Click" Width="26" Height="26"
+                                    Background="Transparent" BorderThickness="0" Cursor="Hand" Focusable="False"
+                                    ToolTip="点一下静音 / 恢复（此滑杆只降低输出音量，100% = 不衰减）">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <!-- 正圆热区，悬停才浮出圆底，不用系统方框 -->
+                                        <Grid>
+                                            <Ellipse x:Name="IcBg" Fill="Transparent"/>
+                                            <TextBlock x:Name="VolIcon" Text="🔊" FontSize="13"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="IcBg" Property="Fill" Value="#221C1914"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="IcBg" Property="Fill" Value="#331C1914"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <!-- 滑杆 -->
+                            <Grid Grid.Column="1" x:Name="VolTrack" Margin="9,0" Height="16"
+                                  MouseLeftButtonDown="VolTrack_MouseLeftButtonDown"
+                                  MouseMove="VolTrack_MouseMove"
+                                  MouseLeftButtonUp="VolTrack_MouseLeftButtonUp"
+                                  Cursor="Hand" Background="Transparent">
+                                <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="#241C1914"/>
+                                <Border x:Name="VolFill" Height="4" CornerRadius="2" HorizontalAlignment="Left"
+                                        VerticalAlignment="Center" Width="0" Background="#1C1914"/>
+                                <Ellipse x:Name="VolKnob" Width="13" Height="13" Fill="White"
+                                         HorizontalAlignment="Left" VerticalAlignment="Center"
+                                         Margin="-6.5,0,0,0">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.35" Color="Black"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                            </Grid>
+
+                            <TextBlock Grid.Column="2" x:Name="VolPct" Text="60%" FontSize="11" Opacity="0.7"
+                                       Width="32" TextAlignment="Right" VerticalAlignment="Center"
+                                       Foreground="#1C1914"/>
+
+                            <!-- − / + 纯图标（无文字） -->
+                            <Button Grid.Column="3" x:Name="VolMinus" Click="VolMinus_Click" Width="28" Height="28"
+                                    Margin="8,0,0,0" Cursor="Hand" Focusable="False" ToolTip="减一档">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border CornerRadius="13" Background="#CCFFFFFF" BorderBrush="#F0FFFFFF" BorderThickness="1">
+                                            <TextBlock Text="−" FontSize="14" FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Foreground="#1C1914"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            <Button Grid.Column="4" x:Name="VolPlus" Click="VolPlus_Click" Width="28" Height="28"
+                                    Margin="5,0,0,0" Cursor="Hand" Focusable="False" ToolTip="加一档">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border CornerRadius="13" Background="#CCFFFFFF" BorderBrush="#F0FFFFFF" BorderThickness="1">
+                                            <TextBlock Text="+" FontSize="14" FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Foreground="#1C1914"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- 参数三行（D-17 / D-18 / D-19） -->
+                    <Border Grid.Row="4" x:Name="ParamsBox" Margin="0,8,0,0" CornerRadius="9" VerticalAlignment="Top"
+                            Background="#14FFFFFF" BorderBrush="#2AFFFFFF" BorderThickness="1">
+                        <StackPanel Margin="0,4">
+                            <!-- 手机地址 -->
+                            <Grid x:Name="RowAddr" Height="34" Background="Transparent" Cursor="Hand"
+                                  MouseLeftButtonDown="RowAddr_Click">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="手机地址" FontSize="12" Opacity="0.56"
+                                           VerticalAlignment="Center" Margin="12,0,0,0" Foreground="#1C1914"/>
+                                <TextBlock Grid.Column="1" x:Name="AddrText" Text="192.168.1.100:5555"
+                                           FontSize="12" FontWeight="Medium" HorizontalAlignment="Right"
+                                           VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#1C1914"/>
+                                <TextBox Grid.Column="1" x:Name="AddrEdit" Visibility="Collapsed" FontSize="12"
+                                         FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                         Width="150" Margin="0,0,8,0" BorderThickness="0" Background="#22FFFFFF"
+                                         Foreground="#1C1914" Padding="4,2"
+                                         KeyDown="AddrEdit_KeyDown" LostFocus="AddrEdit_LostFocus"/>
+                            </Grid>
+                            <Border Height="1" Background="#141C1914" Margin="12,0"/>
+
+                            <!-- 码率 -->
+                            <Grid x:Name="RowRate" Height="34" Background="Transparent" Cursor="Hand"
+                                  MouseLeftButtonDown="RowRate_Click">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="码率" FontSize="12" Opacity="0.56"
+                                           VerticalAlignment="Center" Margin="12,0,0,0" Foreground="#1C1914"/>
+                                <TextBlock Grid.Column="1" x:Name="RateText" Text="256K" FontSize="12"
+                                           FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Margin="0,0,12,0" Foreground="#1C1914"/>
+                            </Grid>
+                            <Border Height="1" Background="#141C1914" Margin="12,0"/>
+
+                            <!-- 音源 -->
+                            <Grid x:Name="RowSrc" Height="34" Background="Transparent" Cursor="Hand"
+                                  MouseLeftButtonDown="RowSrc_Click">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="音源" FontSize="12" Opacity="0.56"
+                                           VerticalAlignment="Center" Margin="12,0,0,0" Foreground="#1C1914"/>
+                                <TextBlock Grid.Column="1" x:Name="SrcText" Text="整个手机声音" FontSize="12"
+                                           FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Margin="0,0,12,0" Foreground="#1C1914"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 主按钮 -->
+                    <Button Grid.Row="5" x:Name="MainBtn" Height="44" Margin="0,10,0,0" Cursor="Hand"
+                            Click="MainBtn_Click" Focusable="False">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" CornerRadius="20">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop x:Name="BtnG1" Color="#2C2820" Offset="0"/>
+                                            <GradientStop x:Name="BtnG2" Color="#131110" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <!-- 文字直接在模板内，避免 ContentPresenter 丢样式 -->
+                                    <TextBlock x:Name="MainBtnText" Text="▶　开始播放"
+                                               FontSize="13" FontWeight="Bold"
+                                               Foreground="#F8F5EE"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- 下拉浮层容器 -->
+        <Canvas x:Name="OverlayCanvas" IsHitTestVisible="True"/>
+    </Grid>
+</Window>

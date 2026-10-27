@@ -1,0 +1,51 @@
+﻿# ---- .NET 编译产物 ----
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.pdb
+*.user
+*.suo
+*.userprefs
+.vs/
+
+# ---- 发布输出 ----
+publish/
+_out/
+
+# ---- scrcpy / adb 二进制（请自行下载，不随本仓库分发）----
+scrcpy.exe
+scrcpy-server
+scrcpy-noconsole.vbs
+scrcpy.png
+adb.exe
+AdbWinApi.dll
+AdbWinUsbApi.dll
+SDL3.dll
+avcodec-*.dll
+avformat-*.dll
+avutil-*.dll
+swresample-*.dll
+libusb-1.0.dll
+
+# ---- 本地便携 SDK ----
+_build/
+
+# ---- 运行时数据与日志 ----
+用户数据/
+*.log
+settings.ini
+audio-sessions.txt
+app-fallback.log
+
+# ---- 个人设计文档与素材（不上传）----
+_design/
+.archify/
+.*-vision-router/
+
+# ---- 系统与编辑器 ----
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+*~
